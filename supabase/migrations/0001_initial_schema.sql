@@ -1,4 +1,4 @@
--- DARKMON initial schema. Apply via Supabase SQL editor or `supabase db push`.
+-- DARKMON initial schema. Applied to project awnyqqnoagilvdwwvbcm.
 
 create extension if not exists "pgcrypto";
 
@@ -167,12 +167,13 @@ create table if not exists world_events (
 );
 
 -- ----------------------------------------------------------------------------
--- RPC: credit_player_gold
+-- RPC: credit_player_gold (service role only; lockdown is in 0003)
 -- ----------------------------------------------------------------------------
 create or replace function credit_player_gold(player_id uuid, amount int)
 returns void
 language plpgsql
 security definer
+set search_path = public
 as $$
 begin
   update players set gold = gold + amount where id = player_id;
@@ -194,42 +195,43 @@ alter table transactions            enable row level security;
 alter table syndicates              enable row level security;
 alter table world_events            enable row level security;
 
--- Players: each user reads/writes their own row.
+-- Players: each user reads all, writes only their own.
 create policy "players self read" on players for select using (true);
-create policy "players self update" on players for update using (auth.uid() = id);
+create policy "players self update" on players for update using ((select auth.uid()) = id);
 
 -- Grimkin: readable by anyone (market browsing), writable only by owner.
+-- Write policy is split per-action in 0002 to avoid overlapping SELECT with the read policy.
 create policy "grimkin read" on grimkin for select using (true);
-create policy "grimkin write" on grimkin for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "grimkin write" on grimkin for all using ((select auth.uid()) = owner_id) with check ((select auth.uid()) = owner_id);
 
 -- Market listings: read all; write only own.
 create policy "market read" on market_listings for select using (true);
-create policy "market write" on market_listings for all using (auth.uid() = seller_id) with check (auth.uid() = seller_id);
+create policy "market write" on market_listings for all using ((select auth.uid()) = seller_id) with check ((select auth.uid()) = seller_id);
 
 -- Black market: read requires infamy >= 10.
 create policy "blackmarket read" on black_market_listings for select using (
-  exists (select 1 from players p where p.id = auth.uid() and p.infamy_score >= 10)
+  exists (select 1 from players p where p.id = (select auth.uid()) and p.infamy_score >= 10)
 );
-create policy "blackmarket write" on black_market_listings for all using (auth.uid() = seller_id) with check (auth.uid() = seller_id);
+create policy "blackmarket write" on black_market_listings for all using ((select auth.uid()) = seller_id) with check ((select auth.uid()) = seller_id);
 
 -- Bounties: read all; write only own.
 create policy "bounties read" on bounties for select using (true);
-create policy "bounties write" on bounties for all using (auth.uid() = poster_id) with check (auth.uid() = poster_id);
+create policy "bounties write" on bounties for all using ((select auth.uid()) = poster_id) with check ((select auth.uid()) = poster_id);
 
 -- Arena fights: read all (spectators); writes via server.
 create policy "arena read" on arena_fights for select using (true);
 
 -- Breeding queue: owner only.
-create policy "breeding read" on breeding_queue for select using (auth.uid() = owner_id);
-create policy "breeding write" on breeding_queue for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "breeding read" on breeding_queue for select using ((select auth.uid()) = owner_id);
+create policy "breeding write" on breeding_queue for all using ((select auth.uid()) = owner_id) with check ((select auth.uid()) = owner_id);
 
 -- Parts: owner only.
-create policy "parts read" on parts_inventory for select using (auth.uid() = owner_id);
-create policy "parts write" on parts_inventory for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "parts read" on parts_inventory for select using ((select auth.uid()) = owner_id);
+create policy "parts write" on parts_inventory for all using ((select auth.uid()) = owner_id) with check ((select auth.uid()) = owner_id);
 
 -- Transactions: participants only.
 create policy "tx read" on transactions for select using (
-  auth.uid() = from_player or auth.uid() = to_player
+  (select auth.uid()) = from_player or (select auth.uid()) = to_player
 );
 
 -- Syndicates: read all; writes via server (leader-driven).
@@ -241,7 +243,6 @@ create policy "events read" on world_events for select using (true);
 -- ----------------------------------------------------------------------------
 -- REALTIME publication
 -- ----------------------------------------------------------------------------
--- Add the high-velocity tables to the realtime publication.
 do $$
 begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
