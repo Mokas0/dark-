@@ -3,11 +3,14 @@ import { useGameStore } from '../state/useGameStore.js';
 import { GrimkinSprite } from '../components/GrimkinSprite.jsx';
 import { LineageTree } from '../components/LineageTree.jsx';
 import { appraise } from '../lib/grimkin.js';
+import { TEMPERAMENTS } from '../lib/temperaments.js';
 
 export function GrimkinDetail() {
   const { id } = useParams();
   const grimkin = useGameStore((s) => s.grimkin);
+  const founders = useGameStore((s) => s.foundersCredit);
   const target = grimkin.find((g) => g.id === id);
+  const descendantsOfThis = founders.filter((f) => f.founder_grimkin_id === id);
 
   if (!target) {
     return (
@@ -52,6 +55,25 @@ export function GrimkinDetail() {
                 <span key={m} className="chip border-accent-void/40 text-accent-void">{m}</span>
               ))}
             </div>
+          </div>
+        )}
+        {target.temperament && (
+          <div>
+            <div className="label mb-1">Temperament</div>
+            <div className="text-xs">
+              <span className="text-accent-void">{target.temperament}</span>
+              <span className="text-text-dim ml-2">— {TEMPERAMENTS[target.temperament]?.description}</span>
+            </div>
+          </div>
+        )}
+        {descendantsOfThis.length > 0 && (
+          <div>
+            <div className="label text-accent-gold mb-1">// Founder of {descendantsOfThis.length} bloodline(s)</div>
+            <ul className="text-[0.65rem] text-text-dim space-y-0.5 max-h-20 overflow-y-auto">
+              {descendantsOfThis.slice(0, 8).map((d, i) => (
+                <li key={i}>→ {d.descendant_name}</li>
+              ))}
+            </ul>
           </div>
         )}
       </section>

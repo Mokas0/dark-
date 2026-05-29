@@ -2,18 +2,23 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { GoldDisplay } from './GoldDisplay.jsx';
 import { HeatMeter } from './HeatMeter.jsx';
 import { FactionBadge } from './FactionBadge.jsx';
+import { StaminaPips } from './StaminaPips.jsx';
 import { useGameStore } from '../state/useGameStore.js';
-import { WorldEventBanner } from './WorldEventBanner.jsx';
+import { TickerFeed } from './TickerFeed.jsx';
+import { HeatOverlay } from './HeatOverlay.jsx';
 
 const NAV = [
   { to: '/hub', label: 'HUB' },
   { to: '/hub/kennel', label: 'KENNEL' },
   { to: '/hub/breeding', label: 'BREEDING' },
   { to: '/hub/inventory', label: 'INVENTORY' },
+  { to: '/hub/shop', label: 'SHOP' },
   { to: '/market', label: 'MARKET' },
-  { to: '/black-market', label: 'BLACK MARKET' },
+  { to: '/black-market', label: 'BLACK' },
   { to: '/bounties', label: 'BOUNTIES' },
   { to: '/arena', label: 'ARENA' },
+  { to: '/raids', label: 'RAIDS' },
+  { to: '/loans', label: 'LOANS' },
   { to: '/world', label: 'WORLD' },
 ];
 
@@ -46,6 +51,7 @@ export function Layout() {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-4">
+            <StaminaPips />
             <FactionBadge faction={player.faction} />
             <HeatMeter heat={player.heat_level} />
             <GoldDisplay gold={player.gold} />
@@ -57,8 +63,9 @@ export function Layout() {
             </NavLink>
           </div>
         </div>
-        <WorldEventBanner />
+        <TickerFeed />
       </header>
+      <HeatOverlay />
 
       <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 py-6">
         <Outlet />

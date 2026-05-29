@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { GrimkinSprite } from './GrimkinSprite.jsx';
 import { appraise, rarityClass, rarityGlow, RARITY_TIERS } from '../lib/grimkin.js';
+import { QuickActions } from './QuickActions.jsx';
 
 const STAT_KEYS = [
   { key: 'vitality', label: 'VIT' },
@@ -17,7 +18,7 @@ export function GrimkinCard({ grimkin, footer, compact = false, onClick, selecte
   return (
     <div
       onClick={onClick}
-      className={`panel p-3 flex flex-col gap-2 transition ${rarityGlow(grimkin.rarity)} ${
+      className={`panel p-3 flex flex-col gap-2 transition group ${rarityGlow(grimkin.rarity)} ${
         onClick ? 'cursor-pointer hover:translate-y-[-2px]' : ''
       } ${selected ? 'outline outline-2 outline-accent-blood' : ''}`}
     >
@@ -35,6 +36,11 @@ export function GrimkinCard({ grimkin, footer, compact = false, onClick, selecte
           <p className="label">
             {grimkin.species} · age {grimkin.age}d · {grimkin.condition}
           </p>
+          {grimkin.temperament && (
+            <p className="text-[0.6rem] uppercase tracking-widest text-accent-void mt-0.5">
+              {grimkin.temperament}
+            </p>
+          )}
           {grimkin.status !== 'alive' && (
             <p className="text-[0.65rem] uppercase tracking-widest text-accent-blood mt-0.5">
               status: {grimkin.status}
@@ -86,6 +92,8 @@ export function GrimkinCard({ grimkin, footer, compact = false, onClick, selecte
           DETAILS →
         </Link>
       </div>
+
+      <QuickActions grimkin={grimkin} />
 
       {footer}
     </div>

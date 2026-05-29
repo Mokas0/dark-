@@ -4,10 +4,12 @@ import { GrimkinCard } from '../components/GrimkinCard.jsx';
 import { appraise } from '../lib/grimkin.js';
 
 export function Market() {
+  const player = useGameStore((s) => s.player);
   const grimkin = useGameStore((s) => s.grimkin);
   const listings = useGameStore((s) => s.marketListings);
   const listOnMarket = useGameStore((s) => s.listOnMarket);
   const cancelListing = useGameStore((s) => s.cancelListing);
+  const buyMarketListing = useGameStore((s) => s.buyMarketListing);
   const adjustGold = useGameStore((s) => s.adjustGold);
 
   const [selected, setSelected] = useState(null);
@@ -77,26 +79,44 @@ export function Market() {
       </section>
 
       <section className="col-span-12 md:col-span-7 panel p-4">
-        <div className="label">// YOUR ACTIVE LISTINGS</div>
+        <div className="label">// MARKET FLOOR</div>
         {listings.length === 0 ? (
-          <p className="text-xs text-text-dim italic mt-2">Nothing on the floor.</p>
+          <p className="text-xs text-text-dim italic mt-2">Floor empty.</p>
         ) : (
           <ul className="mt-3 space-y-2">
-            {listings.map((l) => (
-              <li key={l.id} className="panel-inset p-3 flex justify-between items-center">
-                <div>
-                  <div className={`rarity-${l.grimkin.rarity}`}>{l.grimkin.name}</div>
-                  <div className="text-[0.65rem] text-text-dim uppercase tracking-widest">
-                    {l.grimkin.species} · {l.grimkin.rarity}
+            {listings.map((l) => {
+              const npc = !!l.is_npc;
+              return (
+                <li key={l.id} className="panel-inset p-3 flex justify-between items-center">
+                  <div>
+                    <div className={`rarity-${l.grimkin.rarity}`}>
+                      {l.grimkin.name}
+                      {npc && <span className="ml-2 text-[0.6rem] text-text-dim">@{l.seller_name}</span>}
+                    </div>
+                    <div className="text-[0.65rem] text-text-dim uppercase tracking-widest">
+                      {l.grimkin.species} · {l.grimkin.rarity}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-accent-gold tabular-nums">{l.price.toLocaleString()}g</span>
-                  <button onClick={() => fakeBuyer(l)} className="btn btn-gold">SIM BUYER</button>
-                  <button onClick={() => cancelListing(l.id)} className="btn">PULL</button>
-                </div>
-              </li>
-            ))}
+                  <div className="flex items-center gap-3">
+                    <span className="text-accent-gold tabular-nums">{l.price.toLocaleString()}g</span>
+                    {npc ? (
+                      <button
+                        onClick={() => buyMarketListing(l.id)}
+                        disabled={player.gold < l.price}
+                        className="btn btn-gold"
+                      >
+                        BUY
+                      </button>
+                    ) : (
+                      <>
+                        <button onClick={() => fakeBuyer(l)} className="btn btn-gold">SIM BUYER</button>
+                        <button onClick={() => cancelListing(l.id)} className="btn">PULL</button>
+                      </>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

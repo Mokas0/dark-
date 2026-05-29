@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { useGameStore } from '../state/useGameStore.js';
+import { useGameStore, sellValue } from '../state/useGameStore.js';
+import { PART_BASELINES } from '../lib/prices.js';
 
 const PART_COLORS = {
   venom: 'text-accent-toxic',
@@ -10,6 +11,7 @@ const PART_COLORS = {
 
 export function Inventory() {
   const parts = useGameStore((s) => s.parts);
+  const prices = useGameStore((s) => s.prices);
   const adjustGold = useGameStore((s) => s.adjustGold);
 
   const grouped = useMemo(() => {
@@ -23,9 +25,8 @@ export function Inventory() {
   }, [parts]);
 
   const sellPart = (p) => {
-    const price = Math.round(p.quality * 4 * p.quantity);
+    const price = sellValue(p, prices);
     adjustGold(price, `Sold ${p.quantity}× ${p.part_type}`);
-    // Remove from inventory.
     useGameStore.setState((s) => ({ parts: s.parts.filter((x) => x.id !== p.id) }));
   };
 
@@ -37,6 +38,29 @@ export function Inventory() {
         <p className="text-xs text-text-dim mt-1">
           Renderers pay by quality. Sell cheap, sell often — or stockpile for the event window.
         </p>
+      </div>
+
+      <div className="panel p-4">
+        <div className="label">// LIVE PRICES</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+          {Object.keys(PART_BASELINES).map((k) => {
+            const p = prices[k];
+            return (
+              <div key={k} className="panel-inset p-2">
+                <div className={`label ${PART_COLORS[k] || ''}`}>{k.toUpperCase()}</div>
+                <div className="text-lg tabular-nums text-accent-gold">{p?.current ?? '—'}g</div>
+                <div
+                  className={`text-[0.6rem] tabular-nums ${
+                    (p?.trend ?? 0) >= 0 ? 'text-accent-toxic' : 'text-accent-blood'
+                  }`}
+                >
+                  {(p?.trend ?? 0) >= 0 ? '+' : ''}
+                  {p?.trend ?? 0}/tick
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {parts.length === 0 && (
@@ -60,7 +84,7 @@ export function Inventory() {
                   </div>
                 </div>
                 <button onClick={() => sellPart(p)} className="btn btn-gold">
-                  SELL · {Math.round(p.quality * 4 * p.quantity)}g
+                  SELL · {sellValue(p, prices).toLocaleString()}g
                 </button>
               </li>
             ))}

@@ -1,4 +1,5 @@
 import { mulberry32, pick, rollD100, rollInt, seedFromString } from './rng.js';
+import { TEMPERAMENTS, rollTemperament } from './temperaments.js';
 
 export const SPECIES = [
   'Vorrghast', 'Slithen', 'Bonemare', 'Grellwyrm', 'Murkhound',
@@ -36,26 +37,30 @@ export const MUTATION_TABLE = [
   { max: 100, kind: 'void_strain', label: 'VOID STRAIN — Singularity offspring' },
 ];
 
-export function pickRarity(rng) {
-  const totalWeight = RARITY_TIERS.reduce((a, b) => a + b.weight, 0);
+export function pickRarity(rng, bias = null) {
+  const weighted = RARITY_TIERS.map((t) => ({
+    ...t,
+    effectiveWeight: t.weight * (bias?.[t.id] ?? 1),
+  }));
+  const totalWeight = weighted.reduce((a, b) => a + b.effectiveWeight, 0);
   let r = rng() * totalWeight;
-  for (const tier of RARITY_TIERS) {
-    if ((r -= tier.weight) <= 0) return tier;
+  for (const tier of weighted) {
+    if ((r -= tier.effectiveWeight) <= 0) return tier;
   }
-  return RARITY_TIERS[0];
+  return weighted[0];
 }
 
 export function generateName(rng) {
   return `${pick(rng, NAME_FRAGMENTS_A)}${pick(rng, NAME_FRAGMENTS_B)}`;
 }
 
-export function generateGrimkin({ seed, ownerId = null, forceRarity = null } = {}) {
+export function generateGrimkin({ seed, ownerId = null, forceRarity = null, rarityBias = null, temperamentOverride = null } = {}) {
   const seedStr = seed ?? `${Date.now()}-${Math.random()}`;
   const rng = mulberry32(seedFromString(seedStr));
 
   const rarity = forceRarity
-    ? RARITY_TIERS.find((t) => t.id === forceRarity) ?? pickRarity(rng)
-    : pickRarity(rng);
+    ? RARITY_TIERS.find((t) => t.id === forceRarity) ?? pickRarity(rng, rarityBias)
+    : pickRarity(rng, rarityBias);
 
   const traitCount = rarity.slots;
   const traits = [];
@@ -91,6 +96,7 @@ export function generateGrimkin({ seed, ownerId = null, forceRarity = null } = {
     mutations: [],
     status: 'alive',
     listed_on: null,
+    temperament: temperamentOverride ?? rollTemperament(rng),
     created_at: new Date().toISOString(),
   };
 }
@@ -231,8 +237,9 @@ export function appraise(grimkin) {
   const conditionMultiplier =
     { Pristine: 1, Scarred: 0.7, Broken: 0.4, Husk: 0.15 }[grimkin.condition] ?? 1;
   const mutationBonus = (grimkin.mutations?.length || 0) * 250;
+  const temperamentBonus = TEMPERAMENTS[grimkin.temperament]?.appraisal_bonus ?? 0;
   return Math.round(
-    (tier.baseValue + statTotal * 6 + mutationBonus) * conditionMultiplier,
+    (tier.baseValue + statTotal * 6 + mutationBonus + temperamentBonus) * conditionMultiplier,
   );
 }
 

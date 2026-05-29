@@ -3,6 +3,7 @@ import { useGameStore } from '../state/useGameStore.js';
 import { GrimkinCard } from '../components/GrimkinCard.jsx';
 import { Countdown } from '../components/Countdown.jsx';
 import { appraise } from '../lib/grimkin.js';
+import { sfx } from '../lib/audio.js';
 
 export function BlackMarket() {
   const player = useGameStore((s) => s.player);
@@ -11,6 +12,7 @@ export function BlackMarket() {
   const listOnBlackMarket = useGameStore((s) => s.listOnBlackMarket);
   const adjustGold = useGameStore((s) => s.adjustGold);
   const adjustInfamy = useGameStore((s) => s.adjustInfamy);
+  const sabotageListing = useGameStore((s) => s.sabotageListing);
 
   const [selected, setSelected] = useState(null);
   const [openingBid, setOpeningBid] = useState('');
@@ -134,12 +136,19 @@ export function BlackMarket() {
           <ul className="mt-3 space-y-2">
             {listings.map((l) => {
               const ended = l.ends_at <= Date.now();
+              const npc = !!l.is_npc;
               return (
-                <li key={l.id} className="panel-inset p-3 flex justify-between items-center">
+                <li key={l.id} className={`panel-inset p-3 flex justify-between items-center ${l.sabotaged ? 'border-accent-void' : ''}`}>
                   <div>
-                    <div className={`rarity-${l.grimkin.rarity}`}>{l.grimkin.name}</div>
+                    <div className={`rarity-${l.grimkin.rarity}`}>
+                      {l.grimkin.name}
+                      {l.sabotaged && <span className="ml-2 text-[0.6rem] text-accent-void">SABOTAGED</span>}
+                    </div>
                     <div className="text-[0.65rem] text-text-dim uppercase tracking-widest">
-                      bid by {l.highest_bidder || '— none —'}
+                      {npc ? `seller ${l.seller_name}` : `bid by ${l.highest_bidder || '— none —'}`}
+                    </div>
+                    <div className="text-[0.55rem] text-accent-blood">
+                      contraband · {l.contraband_rating}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -151,7 +160,16 @@ export function BlackMarket() {
                         ends in <Countdown to={l.ends_at} />
                       </div>
                     </div>
-                    {ended && (
+                    {npc && !l.sabotaged && (
+                      <button
+                        onClick={() => sabotageListing(l.id)}
+                        className="btn btn-void"
+                        title="Spike contraband rating, drop the bid. Costs 3 infamy."
+                      >
+                        SABOTAGE
+                      </button>
+                    )}
+                    {ended && !npc && (
                       <button onClick={() => settle(l)} className="btn btn-void">
                         SETTLE
                       </button>

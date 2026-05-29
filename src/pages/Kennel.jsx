@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useGameStore } from '../state/useGameStore.js';
 import { GrimkinCard } from '../components/GrimkinCard.jsx';
-import { RARITY_TIERS } from '../lib/grimkin.js';
+import { RARITY_TIERS, appraise } from '../lib/grimkin.js';
 
 export function Kennel() {
   const grimkin = useGameStore((s) => s.grimkin);
   const player = useGameStore((s) => s.player);
+  const policies = useGameStore((s) => s.insurancePolicies);
   const harvest = useGameStore((s) => s.harvest);
   const removeGrimkin = useGameStore((s) => s.removeGrimkin);
+  const insureGrimkin = useGameStore((s) => s.insureGrimkin);
   const [filter, setFilter] = useState('alive');
 
   const filtered = useMemo(() => {
@@ -68,18 +70,19 @@ export function Kennel() {
               footer={
                 g.status === 'alive' ? (
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        if (confirm(`Process ${g.name}? This will kill them for parts.`)) {
-                          harvest(g.id);
-                        }
-                      }}
-                      className="btn btn-blood flex-1"
-                      disabled={!!g.listed_on}
-                      title={g.listed_on ? 'Currently listed.' : ''}
-                    >
-                      PROCESS
-                    </button>
+                    {policies.find((p) => p.grimkin_id === g.id) ? (
+                      <span className="chip border-accent-toxic/40 text-accent-toxic">INSURED</span>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          const payout = Math.round(appraise(g) * 0.6);
+                          insureGrimkin({ grimkinId: g.id, payout });
+                        }}
+                        className="btn flex-1"
+                      >
+                        INSURE
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <button onClick={() => removeGrimkin(g.id)} className="btn">
