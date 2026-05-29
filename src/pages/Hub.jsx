@@ -1,16 +1,26 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useGameStore } from '../state/useGameStore.js';
 import { GrimkinCard } from '../components/GrimkinCard.jsx';
+import { Countdown } from '../components/Countdown.jsx';
 import { appraise } from '../lib/grimkin.js';
 
 export function Hub() {
   const player = useGameStore((s) => s.player);
   const grimkin = useGameStore((s) => s.grimkin);
   const log = useGameStore((s) => s.log);
-  const catchWild = useGameStore((s) => s.catchWild);
+  const scavengeRun = useGameStore((s) => s.scavengeRun);
+  const startScavenge = useGameStore((s) => s.startScavenge);
+  const completeScavenge = useGameStore((s) => s.completeScavenge);
+  const cancelScavenge = useGameStore((s) => s.cancelScavenge);
+
+  const [lastRunResult, setLastRunResult] = useState(null);
 
   const liveGrimkin = grimkin.filter((g) => g.status === 'alive');
   const totalValue = liveGrimkin.reduce((sum, g) => sum + appraise(g), 0);
+
+  const runActive = !!scavengeRun;
+  const runReady = runActive && scavengeRun.completesAt <= Date.now();
 
   return (
     <div className="grid grid-cols-12 gap-4">
@@ -38,12 +48,53 @@ export function Hub() {
       <section className="col-span-12 md:col-span-8 panel p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="label text-text-primary">// THE STREETS</h2>
-          <button onClick={catchWild} className="btn btn-blood">SCAVENGE</button>
+          {!runActive && (
+            <button
+              onClick={() => {
+                setLastRunResult(null);
+                startScavenge();
+              }}
+              className="btn btn-blood"
+            >
+              BEGIN RUN
+            </button>
+          )}
+          {runActive && !runReady && (
+            <div className="flex items-center gap-3">
+              <span className="label">RUN ENDS IN</span>
+              <Countdown to={scavengeRun.completesAt} />
+              <button onClick={cancelScavenge} className="btn">ABORT</button>
+            </div>
+          )}
+          {runReady && (
+            <button
+              onClick={() => setLastRunResult(completeScavenge())}
+              className="btn btn-blood animate-pulse-blood"
+            >
+              COLLECT
+            </button>
+          )}
         </div>
         <p className="text-xs text-text-dim leading-relaxed">
-          Crawl the alleys. Most strays are common — but the storm sometimes spits up something
-          worth gutting. Each scavenge costs nothing but draws no Heat. For now.
+          {!runActive && 'Crawl the alleys. A run takes ~15 minutes. Most come back with a stray — sometimes the Murk gives up nothing, sometimes you draw Heat on your way home.'}
+          {runActive && !runReady && 'You\'re out there now. Don\'t loiter on the hub — the timer keeps running while you work the rest of your operation.'}
+          {runReady && 'You\'re back. Collect before someone else does.'}
         </p>
+
+        {lastRunResult && (
+          <div className="panel-inset p-2 text-xs">
+            {lastRunResult.outcome === 'empty' && (
+              <span className="text-text-dim">// Empty-handed. The streets owe you nothing.</span>
+            )}
+            {lastRunResult.outcome === 'catch' && (
+              <span className="text-accent-toxic">// Caught a {lastRunResult.grimkin.species}. Added to kennel.</span>
+            )}
+            {lastRunResult.outcome === 'hot_catch' && (
+              <span className="text-accent-blood">// Caught a {lastRunResult.grimkin.species} — but you were seen. Heat +3.</span>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
           {liveGrimkin.slice(0, 4).map((g) => (
             <GrimkinCard key={g.id} grimkin={g} compact />

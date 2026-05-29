@@ -7,6 +7,7 @@ import { resolveFight } from '../lib/combat.js';
 // wired to network calls; the components don't care where the data lives.
 
 const STARTING_GRIMKIN = 3;
+const SCAVENGE_DURATION_MS = 15 * 60 * 1000;
 
 function seedPlayer() {
   return {
@@ -42,6 +43,7 @@ export const useGameStore = create(
       bounties: [],
       arenaHistory: [],
       worldEvents: [],
+      scavengeRun: null,
       log: [],
 
       // -- LOG --
@@ -71,8 +73,66 @@ export const useGameStore = create(
       setFaction: (faction) =>
         set((s) => ({ player: { ...s.player, faction } })),
 
-      // -- GRIMKIN --
+      // -- SCAVENGE / GRIMKIN --
+      startScavenge: () => {
+        const existing = get().scavengeRun;
+        if (existing && existing.completesAt > Date.now()) {
+          return { error: 'A run is already underway.' };
+        }
+        const run = {
+          id: 'sc-' + Math.random().toString(36).slice(2, 10),
+          startedAt: Date.now(),
+          completesAt: Date.now() + SCAVENGE_DURATION_MS,
+        };
+        set({ scavengeRun: run });
+        get().pushLog({ kind: 'scavenge', message: `Run started. Working the alleys for ~15m.` });
+        return run;
+      },
+
+      cancelScavenge: () => {
+        if (!get().scavengeRun) return;
+        set({ scavengeRun: null });
+        get().pushLog({ kind: 'scavenge', message: `Run aborted. Came back empty.` });
+      },
+
+      completeScavenge: () => {
+        const run = get().scavengeRun;
+        if (!run) return { error: 'No run in progress.' };
+        if (run.completesAt > Date.now()) return { error: 'Run not finished.' };
+
+        // Outcome roll. Most runs net a Grimkin; some come back empty; some
+        // tangle with something on the way back and raise Heat.
+        const roll = Math.random();
+        let result;
+        if (roll < 0.15) {
+          // Empty-handed.
+          result = { outcome: 'empty' };
+          get().pushLog({ kind: 'scavenge', message: `Run ended cold. The Murk gave up nothing.` });
+        } else if (roll < 0.92) {
+          // Standard catch.
+          const g = generateGrimkin({ seed: `wild-${run.id}`, ownerId: get().player.id });
+          set((s) => ({ grimkin: [g, ...s.grimkin] }));
+          get().pushLog({ kind: 'catch', message: `Caught a ${g.rarity.toUpperCase()} ${g.species} — "${g.name}".` });
+          result = { outcome: 'catch', grimkin: g };
+        } else {
+          // Caught something AND drew attention. Slight Heat bump.
+          const g = generateGrimkin({ seed: `wild-${run.id}-hot`, ownerId: get().player.id });
+          set((s) => ({
+            grimkin: [g, ...s.grimkin],
+            player: { ...s.player, heat_level: Math.min(100, s.player.heat_level + 3) },
+          }));
+          get().pushLog({
+            kind: 'catch',
+            message: `Caught ${g.species} "${g.name}" — but you were seen. Heat +3.`,
+          });
+          result = { outcome: 'hot_catch', grimkin: g };
+        }
+        set({ scavengeRun: null });
+        return result;
+      },
+
       catchWild: () => {
+        // Legacy/dev: bypass the timer. Used for testing or future "instant catch" items.
         const g = generateGrimkin({ seed: `wild-${Date.now()}`, ownerId: get().player.id });
         set((s) => ({ grimkin: [g, ...s.grimkin] }));
         get().pushLog({ kind: 'catch', message: `Caught a ${g.rarity.toUpperCase()} ${g.species} — "${g.name}".` });
@@ -317,6 +377,7 @@ export const useGameStore = create(
           bounties: [],
           arenaHistory: [],
           worldEvents: [],
+          scavengeRun: null,
           log: [],
         }),
     }),
