@@ -18,8 +18,6 @@ import {
 import { sfx } from '../lib/audio.js';
 
 const STARTING_GRIMKIN = 3;
-const STAMINA_MAX = 5;
-const STAMINA_REGEN_MS = 12 * 60 * 1000;
 const LOAN_INTEREST = 0.15;
 const TICKER_MAX = 40;
 
@@ -34,9 +32,6 @@ function seedPlayer() {
     faction: null,
     rank: 1,
     kennel_size: 12,
-    stamina: STAMINA_MAX,
-    stamina_max: STAMINA_MAX,
-    stamina_regen_at: Date.now() + STAMINA_REGEN_MS,
     raid_licenses: 1,
     vendetta_tokens: 0,
     prestige: 0,
@@ -63,7 +58,6 @@ function seedItems() {
     { id: 'snare', quantity: 3 },
     { id: 'bait', quantity: 1 },
     { id: 'listening_kit', quantity: 1 },
-    { id: 'stim', quantity: 2 },
   ];
 }
 
@@ -155,23 +149,6 @@ export const useGameStore = create(
         set((s) => ({ player: { ...s.player, faction } }));
       },
 
-      regenStamina: () => {
-        const s = get();
-        if (s.player.stamina >= s.player.stamina_max) return;
-        if (Date.now() < s.player.stamina_regen_at) return;
-        const ticks = Math.min(
-          s.player.stamina_max - s.player.stamina,
-          Math.floor((Date.now() - s.player.stamina_regen_at) / STAMINA_REGEN_MS) + 1,
-        );
-        set((st) => ({
-          player: {
-            ...st.player,
-            stamina: Math.min(st.player.stamina_max, st.player.stamina + ticks),
-            stamina_regen_at: Date.now() + STAMINA_REGEN_MS,
-          },
-        }));
-      },
-
       // ── ITEMS / LOADOUT ────────────────────────────────────────────────
       buyItem: (itemId, qty = 1) => {
         const item = ITEMS[itemId];
@@ -201,18 +178,6 @@ export const useGameStore = create(
         });
       },
 
-      useStim: () => {
-        const s = get();
-        const stim = s.items.find((i) => i.id === 'stim');
-        if (!stim || stim.quantity <= 0) return { error: 'No stims.' };
-        if (s.player.stamina >= s.player.stamina_max) return { error: 'Stamina already full.' };
-        set((st) => ({
-          player: { ...st.player, stamina: Math.min(st.player.stamina_max, st.player.stamina + 1) },
-        }));
-        get().consumeItem('stim', 1);
-        return { ok: true };
-      },
-
       // ── SCAVENGE ───────────────────────────────────────────────────────
       startScavenge: ({ zoneId = 'silt', loadout = [] } = {}) => {
         const s = get();
@@ -220,17 +185,6 @@ export const useGameStore = create(
           return { error: 'A run is already underway.' };
         }
         const zone = zoneById(zoneId);
-        if (s.player.stamina < zone.stamina_cost) return { error: `Need ${zone.stamina_cost} stamina.` };
-        // Consume stamina + loadout items.
-        set((st) => ({
-          player: {
-            ...st.player,
-            stamina: st.player.stamina - zone.stamina_cost,
-            stamina_regen_at: st.player.stamina === st.player.stamina_max
-              ? Date.now() + STAMINA_REGEN_MS
-              : st.player.stamina_regen_at,
-          },
-        }));
         for (const id of loadout) get().consumeItem(id, 1);
         // Drain saturation for this zone.
         set((st) => ({
@@ -1039,7 +993,7 @@ export const useGameStore = create(
     }),
     {
       name: 'darkmon:v1',
-      version: 2,
+      version: 3,
     },
   ),
 );

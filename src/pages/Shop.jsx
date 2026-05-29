@@ -22,7 +22,7 @@ export function Shop() {
         <div className="label">// SHOP</div>
         <h1 className="display-heading text-2xl mt-1">The Quartermaster</h1>
         <p className="text-xs text-text-dim mt-1">
-          Snares, baits, muzzles, listening kits, stims. Pay in coin. No questions.
+          Snares, baits, listening kits. Pay in coin. No questions.
         </p>
       </div>
       {msg && <p className="text-xs text-accent-blood">{msg}</p>}

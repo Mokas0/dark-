@@ -29,13 +29,6 @@ export const ITEMS = {
     price: 90,
     effects: { empty_reduction: 0.7 },
   },
-  stim: {
-    id: 'stim',
-    name: 'Black Stim',
-    description: 'Restores a stamina charge. Use anytime.',
-    price: 60,
-    effects: { stamina_refill: 1 },
-  },
 };
 
 export const ITEM_LIST = Object.values(ITEMS);

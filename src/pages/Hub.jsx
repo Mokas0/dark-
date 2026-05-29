@@ -102,7 +102,7 @@ export function Hub() {
                     >
                       <div className={`text-sm ${z.palette}`}>{z.name}</div>
                       <div className="text-[0.6rem] text-text-dim mt-0.5">
-                        {Math.round(z.duration_ms / 60000)}m · {z.stamina_cost} stam
+                        {Math.round(z.duration_ms / 60000)}m
                       </div>
                       <div className="stat-bar mt-1">
                         <div className="h-full bg-accent-toxic" style={{ width: `${sat}%` }} />
@@ -118,7 +118,7 @@ export function Hub() {
             <div>
               <div className="label mb-1">// LOADOUT</div>
               <div className="flex flex-wrap gap-1">
-                {items.filter((i) => i.id !== 'stim').map((inv) => {
+                {items.map((inv) => {
                   const item = ITEMS[inv.id];
                   if (!item) return null;
                   const picked = loadout.includes(inv.id);
@@ -136,7 +136,7 @@ export function Hub() {
                     </button>
                   );
                 })}
-                {items.filter((i) => i.id !== 'stim').length === 0 && (
+                {items.length === 0 && (
                   <span className="text-xs text-text-dim italic">No loadout items. Visit the shop.</span>
                 )}
               </div>

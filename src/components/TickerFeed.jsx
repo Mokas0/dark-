@@ -23,7 +23,6 @@ export function TickerFeed() {
   const tickStud = useGameStore((s) => s.tickStudIncome);
   const tickLoans = useGameStore((s) => s.tickLoans);
   const tickIncome = useGameStore((s) => s.tickDistrictIncome);
-  const regenStamina = useGameStore((s) => s.regenStamina);
   const seenIds = useRef(new Set());
 
   useEffect(() => {
@@ -34,10 +33,9 @@ export function TickerFeed() {
       tickStud();
       tickLoans();
       tickIncome();
-      regenStamina();
     }, 5000);
     return () => clearInterval(t);
-  }, [tickWorld, tickPrices, tickSaturation, tickStud, tickLoans, tickIncome, regenStamina]);
+  }, [tickWorld, tickPrices, tickSaturation, tickStud, tickLoans, tickIncome]);
 
   useEffect(() => {
     if (!ticker.length) return;

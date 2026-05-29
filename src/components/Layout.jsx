@@ -2,7 +2,6 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { GoldDisplay } from './GoldDisplay.jsx';
 import { HeatMeter } from './HeatMeter.jsx';
 import { FactionBadge } from './FactionBadge.jsx';
-import { StaminaPips } from './StaminaPips.jsx';
 import { useGameStore } from '../state/useGameStore.js';
 import { TickerFeed } from './TickerFeed.jsx';
 import { HeatOverlay } from './HeatOverlay.jsx';
@@ -51,7 +50,6 @@ export function Layout() {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-4">
-            <StaminaPips />
             <FactionBadge faction={player.faction} />
             <HeatMeter heat={player.heat_level} />
             <GoldDisplay gold={player.gold} />
